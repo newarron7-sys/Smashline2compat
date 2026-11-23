@@ -285,7 +285,9 @@ fn owner_base_from_kind(kind: i32) -> i32 {
 #[no_mangle]
 pub extern "C" fn smashlinx_update_weapon_count(fighter_kind: i32, generate_article_id: i32, new_count: i32) {
     WEAPON_COUNTS.lock().unwrap().insert((fighter_kind, generate_article_id), new_count);
-    COUNT_HOOK_INSTALLED.call_once(|| skyline::install_hook!(get_static_fighter_data));
+    COUNT_HOOK_INSTALLED.call_once(|| {
+        skyline::install_hook!(get_static_fighter_data);
+    });
 }
 
 // ---------------------------------------------------------------- enable_weapon_module
