@@ -4,7 +4,7 @@
 //! sont modifiés pour chercher `smashlinx_*` au lieu de ces fonctions, qui n'existent pas
 //! (ou pas avec ces paramètres) dans le Smashline 1.6.6 :
 //!   - smashline_clone_weapon (format 2.0)       -> traduit vers le clone_weapon 1.6.6
-//!   - smashline_update_weapon_count (format 2.0) -> ignoré (voir plus bas)
+//!   - smashline_update_weapon_count (format 2.0) -> corrige le nombre max des clones
 //!   - smashline_enable_weapon_module            -> écrit dans la table des modules du jeu
 //!   - smashline_replace_weapon_vtable           -> hook get_weapon_vtable + aiguillage par joueur
 //!   - smashline_replace_fighter_vtable_costume  -> hook get_fighter_vtable, aiguillage par costume
@@ -211,12 +211,82 @@ pub extern "C" fn smashlinx_clone_weapon(
 
 // ---------------------------------------------------------------- update_weapon_count (2.0)
 //
-// 2.0 : (fighter_kind, generate_article_id, new_count). Le 1.6.6 ne sait changer que le nombre
-// maximum des articles vanilla, pas celui d'un clone : on l'ignore. Les clones gardent le nombre
-// maximum de l'arme d'origine.
+// 2.0 : (fighter_kind, generate_article_id, new_count). Le 1.6.6 ne change que le nombre maximum
+// des articles vanilla : ses clones recopient celui de l'arme d'origine (cloning/weapons.rs,
+// get_static_fighter_data). Sans correction, un clone peut exister en plusieurs exemplaires alors
+// que le mod n'en veut qu'un (ex. up B de Potemkin : 3 generate_article de suite).
+//
+// On intercepte donc la table d'articles APRÈS Smashline : notre hook est posé au premier
+// update_weapon_count, donc après celui de Smashline (posé dans son main) ; il l'enveloppe et
+// corrige le nombre maximum dans la table que Smashline vient de construire.
+
+#[repr(C)]
+struct ArticleDescriptor {
+    weapon_id: i32,
+    max_count: i32,
+    on_init: usize,
+    on_fini: usize,
+    extra: u64,
+}
+
+#[repr(C)]
+struct StaticArticleData {
+    descriptors: *mut ArticleDescriptor,
+    count: usize,
+}
+
+#[repr(C)]
+struct StaticFighterData {
+    id: i32,
+    static_article_info: *const StaticArticleData,
+}
+
+/// (FIGHTER_KIND, generate_article_id) -> nombre maximum voulu
+static WEAPON_COUNTS: Mutex<BTreeMap<(i32, i32), i32>> = Mutex::new(BTreeMap::new());
+static COUNT_HOOK_INSTALLED: std::sync::Once = std::sync::Once::new();
+
+#[skyline::hook(offset = 0x64b730)]
+unsafe fn get_static_fighter_data(kind: i32) -> *const StaticFighterData {
+    let data = call_original!(kind);
+    if data.is_null() || (*data).static_article_info.is_null() {
+        return data;
+    }
+    let info = &*(*data).static_article_info;
+    if info.descriptors.is_null() {
+        return data;
+    }
+    let counts: Vec<(i32, i32)> = WEAPON_COUNTS
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|((k, _), _)| *k == kind)
+        .map(|((_, id), n)| (*id, *n))
+        .collect();
+    let base = owner_base_from_kind(kind);
+    for (generate_id, new_count) in counts {
+        // Seuls les clones (après les articles vanilla) sont touchés, jamais la table d'origine du jeu
+        // (que Smashline renvoie telle quelle pendant une copie de Kirby).
+        if generate_id < base || generate_id as usize >= info.count {
+            continue;
+        }
+        (*info.descriptors.add(generate_id as usize)).max_count = new_count;
+    }
+    data
+}
+
+fn owner_base_from_kind(kind: i32) -> i32 {
+    match kind {
+        0x2a => owner_info("dedede").unwrap().1,
+        0x3f => owner_info("kamui").unwrap().1,
+        _ => i32::MAX,
+    }
+}
 
 #[no_mangle]
-pub extern "C" fn smashlinx_update_weapon_count(_fighter_kind: i32, _generate_article_id: i32, _new_count: i32) {}
+pub extern "C" fn smashlinx_update_weapon_count(fighter_kind: i32, generate_article_id: i32, new_count: i32) {
+    WEAPON_COUNTS.lock().unwrap().insert((fighter_kind, generate_article_id), new_count);
+    COUNT_HOOK_INSTALLED.call_once(|| skyline::install_hook!(get_static_fighter_data));
+}
 
 // ---------------------------------------------------------------- enable_weapon_module
 
