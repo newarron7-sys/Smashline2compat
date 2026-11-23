@@ -1,0 +1,21 @@
+[package]
+name = "smashline2_compat"
+version = "1.0.0"
+edition = "2021"
+description = "Recrée pour Smash 13.0.4 (Smashline 1.6.6) les fonctions du Smashline 2.0 utilisées par Potemkin v3 et King Boo"
+
+[package.metadata.skyline]
+titleid = "01006A800016E000"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+skyline = { git = "https://github.com/ultimate-research/skyline-rs" }
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+lto = true

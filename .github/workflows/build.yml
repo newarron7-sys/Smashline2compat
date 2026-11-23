@@ -1,0 +1,54 @@
+name: Build libsmashline2_compat.nro
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache cargo-skyline, toolchain Switch et compilation
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/cargo-skyline
+            ~/.cargo/skyline
+            ~/.rustup/toolchains/*skyline*
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: sl2-skyline-v1-${{ hashFiles('Cargo.toml') }}
+          restore-keys: |
+            sl2-skyline-v1-
+      - name: Install cargo-skyline
+        run: command -v cargo-skyline >/dev/null || cargo install cargo-skyline
+      - name: Install skyline toolchain
+        run: |
+          if rustup toolchain list | grep -qi skyline && [ -d ~/.cargo/skyline/toolchain ]; then echo "toolchain en cache"; exit 0; fi
+          for i in 1 2 3 4 5; do cargo skyline update-std && break; sleep 20; done
+      - name: Build
+        timeout-minutes: 20
+        run: |
+          yes | cargo skyline build --release
+          mkdir -p /tmp/raw && cp target/aarch64-skyline-switch/release/libsmashline2_compat.nro /tmp/raw/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libsmashline2_compat
+          path: /tmp/raw/libsmashline2_compat.nro
+      - name: Publier le NRO sur la branche nro
+        run: |
+          cd /tmp/raw && ls -la
+          git init -q -b nro
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add -A && git commit -q -m "Build ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" nro
