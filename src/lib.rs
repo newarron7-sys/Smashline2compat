@@ -229,6 +229,7 @@ static WEAPON_COUNTS: Mutex<BTreeMap<(i32, i32), i32>> = Mutex::new(BTreeMap::ne
 #[no_mangle]
 pub extern "C" fn smashlinx_update_weapon_count(fighter_kind: i32, generate_article_id: i32, new_count: i32) {
     WEAPON_COUNTS.lock().unwrap().insert((fighter_kind, generate_article_id), new_count);
+    diag(format!("---- démarrage : combattant {:#x} article {} maximum {}", fighter_kind, generate_article_id, new_count));
 }
 
 
@@ -243,6 +244,101 @@ extern "C" {
     fn game_remove_exist(accessor: *mut u8, article: i32, target: i32) -> u64;
 }
 
+// ---------------------------------------------------------------- journal de diagnostic (temporaire)
+//
+// Écrit sur la carte SD (sd:/smashline2_compat_log.txt) chaque opération du mod sur ses objets
+// copiés, avec le nombre d'exemplaires avant/après, pour comprendre l'ordre réel des opérations.
+
+static LOG_LINES: AtomicUsize = AtomicUsize::new(0);
+const LOG_MAX: usize = 4000;
+
+fn diag(line: String) {
+    let n = LOG_LINES.fetch_add(1, Ordering::Relaxed);
+    if n >= LOG_MAX {
+        return;
+    }
+    use std::io::Write;
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("sd:/smashline2_compat_log.txt") {
+        let _ = writeln!(f, "{:05} {}", n, line);
+    }
+}
+
+fn is_clone_article(accessor: *mut u8, article: i32) -> bool {
+    if accessor.is_null() {
+        return false;
+    }
+    let kind = unsafe { game_get_kind(accessor) };
+    WEAPON_COUNTS.lock().unwrap().keys().any(|(k, id)| *k == kind && *id == article)
+}
+
+fn active(accessor: *mut u8, article: i32) -> i32 {
+    unsafe { game_get_active_num(accessor, article) }
+}
+
+extern "C" {
+    #[link_name = "_ZN3app8lua_bind33ArticleModule__change_motion_implEPNS_26BattleObjectModuleAccessorEiN3phx6Hash40Ebf"]
+    fn game_change_motion(accessor: *mut u8, article: i32, motion: u64, arg4: bool, frame: f32) -> u64;
+    #[link_name = "_ZN3app8lua_bind26ArticleModule__remove_implEPNS_26BattleObjectModuleAccessorEiNS_22ArticleOperationTargetE"]
+    fn game_remove(accessor: *mut u8, article: i32, target: i32) -> u64;
+    #[link_name = "_ZN3app8lua_bind40ArticleModule__set_visibility_whole_implEPNS_26BattleObjectModuleAccessorEibNS_22ArticleOperationTargetE"]
+    fn game_set_visibility_whole(accessor: *mut u8, article: i32, visible: bool, target: i32);
+    #[link_name = "_ZN3app8lua_bind32VisibilityModule__set_whole_implEPNS_26BattleObjectModuleAccessorEb"]
+    fn game_set_whole(accessor: *mut u8, visible: bool);
+}
+
+#[export_name = "_ZN3slx8lua_bind33ArticleModule__change_motion_implEPNS_26BattleObjectModuleAccessorEiN3phx6Hash40Ebf"]
+pub extern "C" fn slx_change_motion(accessor: *mut u8, article: i32, motion: u64, arg4: bool, frame: f32) -> u64 {
+    let watch = is_clone_article(accessor, article);
+    let before = if watch { active(accessor, article) } else { 0 };
+    let r = unsafe { game_change_motion(accessor, article, motion, arg4, frame) };
+    if watch {
+        diag(format!("motion   art={} motion={:#x} frame={} actifs={} ret={:#x}", article, motion, frame, before, r));
+    }
+    r
+}
+
+#[export_name = "_ZN3slx8lua_bind32ArticleModule__remove_exist_implEPNS_26BattleObjectModuleAccessorEiNS_22ArticleOperationTargetE"]
+pub extern "C" fn slx_remove_exist(accessor: *mut u8, article: i32, target: i32) -> u64 {
+    let watch = is_clone_article(accessor, article);
+    let before = if watch { active(accessor, article) } else { 0 };
+    let r = unsafe { game_remove_exist(accessor, article, target) };
+    if watch {
+        diag(format!("rm_exist art={} cible={} actifs {} -> {}", article, target, before, active(accessor, article)));
+    }
+    r
+}
+
+#[export_name = "_ZN3slx8lua_bind26ArticleModule__remove_implEPNS_26BattleObjectModuleAccessorEiNS_22ArticleOperationTargetE"]
+pub extern "C" fn slx_remove(accessor: *mut u8, article: i32, target: i32) -> u64 {
+    let watch = is_clone_article(accessor, article);
+    let before = if watch { active(accessor, article) } else { 0 };
+    let r = unsafe { game_remove(accessor, article, target) };
+    if watch {
+        diag(format!("remove   art={} cible={} actifs {} -> {}", article, target, before, active(accessor, article)));
+    }
+    r
+}
+
+#[export_name = "_ZN3slx8lua_bind40ArticleModule__set_visibility_whole_implEPNS_26BattleObjectModuleAccessorEibNS_22ArticleOperationTargetE"]
+pub extern "C" fn slx_set_visibility_whole(accessor: *mut u8, article: i32, visible: bool, target: i32) {
+    if is_clone_article(accessor, article) {
+        diag(format!("art_vis  art={} visible={} actifs={}", article, visible, active(accessor, article)));
+    }
+    unsafe { game_set_visibility_whole(accessor, article, visible, target) }
+}
+
+#[export_name = "_ZN3slx8lua_bind32VisibilityModule__set_whole_implEPNS_26BattleObjectModuleAccessorEb"]
+pub extern "C" fn slx_set_whole(accessor: *mut u8, visible: bool) {
+    if !accessor.is_null() {
+        let kind = unsafe { game_get_kind(accessor) };
+        // Les objets copiés gardent le WEAPON_KIND d'origine : on note ceux des armes clonées.
+        if clone_owner_kind(kind).is_some() {
+            diag(format!("set_whole objet_kind={:#x} visible={}", kind, visible));
+        }
+    }
+    unsafe { game_set_whole(accessor, visible) }
+}
+
 #[export_name = "_ZN3slx8lua_bind36ArticleModule__generate_article_implEPNS_26BattleObjectModuleAccessorEibi"]
 pub extern "C" fn slx_generate_article(accessor: *mut u8, article: i32, arg3: bool, arg4: i32) -> u64 {
     let wanted: Vec<(i32, i32)> = WEAPON_COUNTS
@@ -252,6 +348,16 @@ pub extern "C" fn slx_generate_article(accessor: *mut u8, article: i32, arg3: bo
         .filter(|((_, id), _)| *id == article)
         .map(|((k, _), n)| (*k, *n))
         .collect();
+    let watch = is_clone_article(accessor, article);
+    let before = if watch { active(accessor, article) } else { 0 };
+    let r = slx_generate_inner(accessor, article, arg3, arg4, &wanted);
+    if watch {
+        diag(format!("generate art={} actifs {} -> {} ret={:#x}", article, before, active(accessor, article), r));
+    }
+    r
+}
+
+fn slx_generate_inner(accessor: *mut u8, article: i32, arg3: bool, arg4: i32, wanted: &[(i32, i32)]) -> u64 {
     unsafe {
         if !wanted.is_empty() && !accessor.is_null() {
             let kind = game_get_kind(accessor);
@@ -265,7 +371,9 @@ pub extern "C" fn slx_generate_article(accessor: *mut u8, article: i32, arg3: bo
                     // l'objet à chaque étape d'un coup (up B : 4 fois) et règle aussitôt son animation ;
                     // le premier exemplaire est d'ailleurs caché par le script du mod (up B, set_whole
                     // false). Refuser laissait ce premier exemplaire invisible : plus de bras géants.
+                    let n = game_get_active_num(accessor, article);
                     game_remove_exist(accessor, article, 0);
+                    diag(format!("  remplace art={} actifs {} -> {} (avant de recréer)", article, n, game_get_active_num(accessor, article)));
                 }
             }
         }
