@@ -232,18 +232,13 @@ pub extern "C" fn smashlinx_update_weapon_count(fighter_kind: i32, generate_arti
 }
 
 
-static GENERATE_FN: AtomicUsize = AtomicUsize::new(0);
-static ACTIVE_NUM_FN: AtomicUsize = AtomicUsize::new(0);
-static GET_KIND_FN: AtomicUsize = AtomicUsize::new(0);
-
-fn cached(slot: &AtomicUsize, name: &str) -> usize {
-    let f = slot.load(Ordering::Relaxed);
-    if f != 0 {
-        return f;
-    }
-    let f = lookup(name);
-    slot.store(f, Ordering::Relaxed);
-    f
+extern "C" {
+    #[link_name = "_ZN3app8lua_bind36ArticleModule__generate_article_implEPNS_26BattleObjectModuleAccessorEibi"]
+    fn game_generate_article(accessor: *mut u8, article: i32, arg3: bool, arg4: i32) -> u64;
+    #[link_name = "_ZN3app8lua_bind34ArticleModule__get_active_num_implEPNS_26BattleObjectModuleAccessorEi"]
+    fn game_get_active_num(accessor: *mut u8, article: i32) -> i32;
+    #[link_name = "_ZN3app7utility8get_kindEPKNS_26BattleObjectModuleAccessorE"]
+    fn game_get_kind(accessor: *const u8) -> i32;
 }
 
 #[export_name = "_ZN3slx8lua_bind36ArticleModule__generate_article_implEPNS_26BattleObjectModuleAccessorEibi"]
@@ -255,30 +250,17 @@ pub extern "C" fn slx_generate_article(accessor: *mut u8, article: i32, arg3: bo
         .filter(|((_, id), _)| *id == article)
         .map(|((k, _), n)| (*k, *n))
         .collect();
-    if !wanted.is_empty() && !accessor.is_null() {
-        let get_kind: extern "C" fn(*mut u8) -> i32 = unsafe {
-            std::mem::transmute(cached(&GET_KIND_FN, "_ZN3app7utility8get_kindEPKNS_26BattleObjectModuleAccessorE"))
-        };
-        let kind = get_kind(accessor);
-        if let Some((_, max)) = wanted.iter().find(|(k, _)| *k == kind) {
-            let active_num: extern "C" fn(*mut u8, i32) -> i32 = unsafe {
-                std::mem::transmute(cached(
-                    &ACTIVE_NUM_FN,
-                    "_ZN3app8lua_bind34ArticleModule__get_active_num_implEPNS_26BattleObjectModuleAccessorEi",
-                ))
-            };
-            if active_num(accessor, article) >= *max {
-                return 0;
+    unsafe {
+        if !wanted.is_empty() && !accessor.is_null() {
+            let kind = game_get_kind(accessor);
+            if let Some((_, max)) = wanted.iter().find(|(k, _)| *k == kind) {
+                if game_get_active_num(accessor, article) >= *max {
+                    return 0;
+                }
             }
         }
+        game_generate_article(accessor, article, arg3, arg4)
     }
-    let generate: extern "C" fn(*mut u8, i32, bool, i32) -> u64 = unsafe {
-        std::mem::transmute(cached(
-            &GENERATE_FN,
-            "_ZN3app8lua_bind36ArticleModule__generate_article_implEPNS_26BattleObjectModuleAccessorEibi",
-        ))
-    };
-    generate(accessor, article, arg3, arg4)
 }
 
 // ---------------------------------------------------------------- enable_weapon_module
