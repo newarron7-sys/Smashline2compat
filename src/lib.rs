@@ -4,7 +4,8 @@
 //! sont modifiés pour chercher `smashlinx_*` au lieu de ces fonctions, qui n'existent pas
 //! (ou pas avec ces paramètres) dans le Smashline 1.6.6 :
 //!   - smashline_clone_weapon (format 2.0)       -> traduit vers le clone_weapon 1.6.6
-//!   - smashline_update_weapon_count (format 2.0) -> corrige le nombre max des clones
+//!   - smashline_update_weapon_count (format 2.0) -> nombre max des clones, appliqué par
+//!     slx_generate_article (le plugin du mod appelle celle-ci à la place de generate_article)
 //!   - smashline_enable_weapon_module            -> écrit dans la table des modules du jeu
 //!   - smashline_replace_weapon_vtable           -> hook get_weapon_vtable + aiguillage par joueur
 //!   - smashline_replace_fighter_vtable_costume  -> hook get_fighter_vtable, aiguillage par costume
@@ -212,82 +213,72 @@ pub extern "C" fn smashlinx_clone_weapon(
 // ---------------------------------------------------------------- update_weapon_count (2.0)
 //
 // 2.0 : (fighter_kind, generate_article_id, new_count). Le 1.6.6 ne change que le nombre maximum
-// des articles vanilla : ses clones recopient celui de l'arme d'origine (cloning/weapons.rs,
-// get_static_fighter_data). Sans correction, un clone peut exister en plusieurs exemplaires alors
-// que le mod n'en veut qu'un (ex. up B de Potemkin : 3 generate_article de suite).
+// des articles vanilla : ses clones recopient celui de l'arme d'origine. Sans correction, un clone
+// peut exister en plusieurs exemplaires (up B de Potemkin : 3 generate_article d'affilée -> un 2e
+// Giganter figé, conteneur visible).
 //
-// On intercepte donc la table d'articles APRÈS Smashline : notre hook est posé au premier
-// update_weapon_count, donc après celui de Smashline (posé dans son main) ; il l'enveloppe et
-// corrige le nombre maximum dans la table que Smashline vient de construire.
-
-#[repr(C)]
-struct ArticleDescriptor {
-    weapon_id: i32,
-    max_count: i32,
-    on_init: usize,
-    on_fini: usize,
-    extra: u64,
-}
-
-#[repr(C)]
-struct StaticArticleData {
-    descriptors: *mut ArticleDescriptor,
-    count: usize,
-}
-
-#[repr(C)]
-struct StaticFighterData {
-    id: i32,
-    static_article_info: *const StaticArticleData,
-}
+// On n'intercepte PAS get_static_fighter_data : Smashline 1.6.6 le détourne déjà, et poser un
+// 2e détournement dessus faisait boucler le jeu au chargement (crash du 24/11).
+// À la place, le plugin du mod est modifié pour appeler slx_generate_article au lieu de
+// ArticleModule::generate_article (même longueur de nom). Cette fonction refuse de créer un clone
+// déjà présent en nombre maximum, comme le fait le jeu avec Smashline 2.0, puis appelle la vraie.
 
 /// (FIGHTER_KIND, generate_article_id) -> nombre maximum voulu
 static WEAPON_COUNTS: Mutex<BTreeMap<(i32, i32), i32>> = Mutex::new(BTreeMap::new());
-static COUNT_HOOK_INSTALLED: std::sync::Once = std::sync::Once::new();
-
-#[skyline::hook(offset = 0x64b730)]
-unsafe fn get_static_fighter_data(kind: i32) -> *const StaticFighterData {
-    let data = call_original!(kind);
-    if data.is_null() || (*data).static_article_info.is_null() {
-        return data;
-    }
-    let info = &*(*data).static_article_info;
-    if info.descriptors.is_null() {
-        return data;
-    }
-    let counts: Vec<(i32, i32)> = WEAPON_COUNTS
-        .lock()
-        .unwrap()
-        .iter()
-        .filter(|((k, _), _)| *k == kind)
-        .map(|((_, id), n)| (*id, *n))
-        .collect();
-    let base = owner_base_from_kind(kind);
-    for (generate_id, new_count) in counts {
-        // Seuls les clones (après les articles vanilla) sont touchés, jamais la table d'origine du jeu
-        // (que Smashline renvoie telle quelle pendant une copie de Kirby).
-        if generate_id < base || generate_id as usize >= info.count {
-            continue;
-        }
-        (*info.descriptors.add(generate_id as usize)).max_count = new_count;
-    }
-    data
-}
-
-fn owner_base_from_kind(kind: i32) -> i32 {
-    match kind {
-        0x2a => owner_info("dedede").unwrap().1,
-        0x3f => owner_info("kamui").unwrap().1,
-        _ => i32::MAX,
-    }
-}
 
 #[no_mangle]
 pub extern "C" fn smashlinx_update_weapon_count(fighter_kind: i32, generate_article_id: i32, new_count: i32) {
     WEAPON_COUNTS.lock().unwrap().insert((fighter_kind, generate_article_id), new_count);
-    COUNT_HOOK_INSTALLED.call_once(|| {
-        skyline::install_hook!(get_static_fighter_data);
-    });
+}
+
+
+static GENERATE_FN: AtomicUsize = AtomicUsize::new(0);
+static ACTIVE_NUM_FN: AtomicUsize = AtomicUsize::new(0);
+static GET_KIND_FN: AtomicUsize = AtomicUsize::new(0);
+
+fn cached(slot: &AtomicUsize, name: &str) -> usize {
+    let f = slot.load(Ordering::Relaxed);
+    if f != 0 {
+        return f;
+    }
+    let f = lookup(name);
+    slot.store(f, Ordering::Relaxed);
+    f
+}
+
+#[export_name = "_ZN3slx8lua_bind36ArticleModule__generate_article_implEPNS_26BattleObjectModuleAccessorEibi"]
+pub extern "C" fn slx_generate_article(accessor: *mut u8, article: i32, arg3: bool, arg4: i32) -> u64 {
+    let wanted: Vec<(i32, i32)> = WEAPON_COUNTS
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|((_, id), _)| *id == article)
+        .map(|((k, _), n)| (*k, *n))
+        .collect();
+    if !wanted.is_empty() && !accessor.is_null() {
+        let get_kind: extern "C" fn(*mut u8) -> i32 = unsafe {
+            std::mem::transmute(cached(&GET_KIND_FN, "_ZN3app7utility8get_kindEPKNS_26BattleObjectModuleAccessorE"))
+        };
+        let kind = get_kind(accessor);
+        if let Some((_, max)) = wanted.iter().find(|(k, _)| *k == kind) {
+            let active_num: extern "C" fn(*mut u8, i32) -> i32 = unsafe {
+                std::mem::transmute(cached(
+                    &ACTIVE_NUM_FN,
+                    "_ZN3app8lua_bind34ArticleModule__get_active_num_implEPNS_26BattleObjectModuleAccessorEi",
+                ))
+            };
+            if active_num(accessor, article) >= *max {
+                return 0;
+            }
+        }
+    }
+    let generate: extern "C" fn(*mut u8, i32, bool, i32) -> u64 = unsafe {
+        std::mem::transmute(cached(
+            &GENERATE_FN,
+            "_ZN3app8lua_bind36ArticleModule__generate_article_implEPNS_26BattleObjectModuleAccessorEibi",
+        ))
+    };
+    generate(accessor, article, arg3, arg4)
 }
 
 // ---------------------------------------------------------------- enable_weapon_module
