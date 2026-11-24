@@ -220,8 +220,8 @@ pub extern "C" fn smashlinx_clone_weapon(
 // On n'intercepte PAS get_static_fighter_data : Smashline 1.6.6 le détourne déjà, et poser un
 // 2e détournement dessus faisait boucler le jeu au chargement (crash du 24/11).
 // À la place, le plugin du mod est modifié pour appeler slx_generate_article au lieu de
-// ArticleModule::generate_article (même longueur de nom). Cette fonction refuse de créer un clone
-// déjà présent en nombre maximum, comme le fait le jeu avec Smashline 2.0, puis appelle la vraie.
+// ArticleModule::generate_article (même longueur de nom). Quand le nombre maximum est atteint, elle
+// remplace l'exemplaire existant (maximum 1) ou refuse (maximum > 1), puis appelle la vraie.
 
 /// (FIGHTER_KIND, generate_article_id) -> nombre maximum voulu
 static WEAPON_COUNTS: Mutex<BTreeMap<(i32, i32), i32>> = Mutex::new(BTreeMap::new());
@@ -239,6 +239,8 @@ extern "C" {
     fn game_get_active_num(accessor: *mut u8, article: i32) -> i32;
     #[link_name = "_ZN3app7utility8get_kindEPKNS_26BattleObjectModuleAccessorE"]
     fn game_get_kind(accessor: *const u8) -> i32;
+    #[link_name = "_ZN3app8lua_bind32ArticleModule__remove_exist_implEPNS_26BattleObjectModuleAccessorEiNS_22ArticleOperationTargetE"]
+    fn game_remove_exist(accessor: *mut u8, article: i32, target: i32) -> u64;
 }
 
 #[export_name = "_ZN3slx8lua_bind36ArticleModule__generate_article_implEPNS_26BattleObjectModuleAccessorEibi"]
@@ -255,7 +257,15 @@ pub extern "C" fn slx_generate_article(accessor: *mut u8, article: i32, arg3: bo
             let kind = game_get_kind(accessor);
             if let Some((_, max)) = wanted.iter().find(|(k, _)| *k == kind) {
                 if game_get_active_num(accessor, article) >= *max {
-                    return 0;
+                    if *max != 1 {
+                        // Plusieurs exemplaires permis (projectiles) : comme le jeu, on refuse.
+                        return 0;
+                    }
+                    // Un seul exemplaire : on remplace l'ancien par le nouveau. Le mod crée souvent
+                    // l'objet à chaque étape d'un coup (up B : 4 fois) et règle aussitôt son animation ;
+                    // le premier exemplaire est d'ailleurs caché par le script du mod (up B, set_whole
+                    // false). Refuser laissait ce premier exemplaire invisible : plus de bras géants.
+                    game_remove_exist(accessor, article, 0);
                 }
             }
         }
