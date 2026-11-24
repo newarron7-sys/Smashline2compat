@@ -290,9 +290,15 @@ extern "C" {
 pub extern "C" fn slx_change_motion(accessor: *mut u8, article: i32, motion: u64, arg4: bool, frame: f32) -> u64 {
     let watch = is_clone_article(accessor, article);
     let before = if watch { active(accessor, article) } else { 0 };
+    if watch {
+        sample_tracked();
+    }
     let r = unsafe { game_change_motion(accessor, article, motion, arg4, frame) };
     if watch {
         diag(format!("motion   art={} motion={:#x} frame={} actifs={} ret={:#x}", article, motion, frame, before, r));
+        if let Some(n) = article_id(accessor, article) {
+            track(n, "après motion");
+        }
     }
     r
 }
@@ -301,9 +307,13 @@ pub extern "C" fn slx_change_motion(accessor: *mut u8, article: i32, motion: u64
 pub extern "C" fn slx_remove_exist(accessor: *mut u8, article: i32, target: i32) -> u64 {
     let watch = is_clone_article(accessor, article);
     let before = if watch { active(accessor, article) } else { 0 };
+    let old = if watch { article_id(accessor, article) } else { None };
     let r = unsafe { game_remove_exist(accessor, article, target) };
     if watch {
         diag(format!("rm_exist art={} cible={} actifs {} -> {}", article, target, before, active(accessor, article)));
+        if let Some(o) = old {
+            track(o, "après rm_exist");
+        }
     }
     r
 }
@@ -339,6 +349,121 @@ pub extern "C" fn slx_set_whole(accessor: *mut u8, visible: bool) {
     unsafe { game_set_whole(accessor, visible) }
 }
 
+// --- état des objets créés (diagnostic v2) : on suit chaque exemplaire par son identifiant et on
+// note ses changements (vivant, statut, animation, visibilité, image figée) à chaque image.
+
+extern "C" {
+    #[link_name = "_ZN3app8lua_bind31ArticleModule__get_article_implEPNS_26BattleObjectModuleAccessorEi"]
+    fn game_get_article(accessor: *mut u8, article: i32) -> *mut u8;
+    #[link_name = "_ZN3app8lua_bind34Article__get_battle_object_id_implEPNS_7ArticleE"]
+    fn game_article_object_id(article: *mut u8) -> u32;
+    #[link_name = "_ZN3app16sv_battle_object9is_activeEj"]
+    fn bo_is_active(id: u32) -> bool;
+    #[link_name = "_ZN3app16sv_battle_object15module_accessorEj"]
+    fn bo_accessor(id: u32) -> *mut u8;
+    #[link_name = "_ZN3app8lua_bind30StatusModule__status_kind_implEPNS_26BattleObjectModuleAccessorE"]
+    fn st_kind(acc: *mut u8) -> i32;
+    #[link_name = "_ZN3app8lua_bind30MotionModule__motion_kind_implEPNS_26BattleObjectModuleAccessorE"]
+    fn mo_kind(acc: *mut u8) -> u64;
+    #[link_name = "_ZN3app8lua_bind24MotionModule__frame_implEPNS_26BattleObjectModuleAccessorE"]
+    fn mo_frame(acc: *mut u8) -> f32;
+    #[link_name = "_ZN3app8lua_bind28MotionModule__end_frame_implEPNS_26BattleObjectModuleAccessorE"]
+    fn mo_end(acc: *mut u8) -> f32;
+    #[link_name = "_ZN3app8lua_bind33VisibilityModule__is_visible_implEPNS_26BattleObjectModuleAccessorE"]
+    fn vis_is_visible(acc: *mut u8) -> bool;
+    #[link_name = "_ZN3app8lua_bind32VisibilityModule__get_whole_implEPNS_26BattleObjectModuleAccessorE"]
+    fn vis_get_whole(acc: *mut u8) -> bool;
+    #[link_name = "_ZN3app8lua_bind35CancelModule__is_enable_cancel_implEPNS_26BattleObjectModuleAccessorE"]
+    fn game_is_enable_cancel(acc: *mut u8) -> bool;
+}
+
+/// (identifiant, dernier état noté, dernière image, nombre d'images figées)
+static TRACKED: Mutex<Vec<(u32, String, f32, u32)>> = Mutex::new(Vec::new());
+
+fn article_id(owner: *mut u8, article: i32) -> Option<u32> {
+    unsafe {
+        if game_get_active_num(owner, article) <= 0 {
+            return None;
+        }
+        let a = game_get_article(owner, article);
+        if a.is_null() {
+            return None;
+        }
+        Some(game_article_object_id(a))
+    }
+}
+
+fn obj_state(id: u32) -> (String, f32) {
+    unsafe {
+        if !bo_is_active(id) {
+            return ("MORT".to_string(), -1.0);
+        }
+        let acc = bo_accessor(id);
+        if acc.is_null() {
+            return ("sans_module".to_string(), -1.0);
+        }
+        let f = mo_frame(acc);
+        (
+            format!(
+                "statut={} anim={:#x} fin={} visible={} whole={}",
+                st_kind(acc),
+                mo_kind(acc),
+                mo_end(acc),
+                vis_is_visible(acc),
+                vis_get_whole(acc)
+            ),
+            f,
+        )
+    }
+}
+
+fn track(id: u32, why: &str) {
+    let (s, f) = obj_state(id);
+    diag(format!("    objet {:#x} {} : {} image={}", id, why, s, f));
+    let mut t = TRACKED.lock().unwrap();
+    t.retain(|e| e.0 != id);
+    t.push((id, s, f, 0));
+    if t.len() > 8 {
+        t.remove(0);
+    }
+}
+
+fn sample_tracked() {
+    let mut t = TRACKED.lock().unwrap();
+    if t.is_empty() {
+        return;
+    }
+    let mut lines = Vec::new();
+    for e in t.iter_mut() {
+        let (s, f) = obj_state(e.0);
+        let frozen = s != "MORT" && f == e.2;
+        if frozen {
+            e.3 += 1;
+            if e.3 == 3 {
+                lines.push(format!("    objet {:#x} FIGÉ à l'image {} : {}", e.0, f, s));
+            }
+        } else {
+            e.3 = 0;
+        }
+        if s != e.1 {
+            lines.push(format!("    objet {:#x} change : {} image={}", e.0, s, f));
+            e.1 = s;
+        }
+        e.2 = f;
+    }
+    t.retain(|e| e.1 != "MORT");
+    drop(t);
+    for l in lines {
+        diag(l);
+    }
+}
+
+#[export_name = "_ZN3slx8lua_bind35CancelModule__is_enable_cancel_implEPNS_26BattleObjectModuleAccessorE"]
+pub extern "C" fn slx_is_enable_cancel(acc: *mut u8) -> bool {
+    sample_tracked();
+    unsafe { game_is_enable_cancel(acc) }
+}
+
 #[export_name = "_ZN3slx8lua_bind36ArticleModule__generate_article_implEPNS_26BattleObjectModuleAccessorEibi"]
 pub extern "C" fn slx_generate_article(accessor: *mut u8, article: i32, arg3: bool, arg4: i32) -> u64 {
     let wanted: Vec<(i32, i32)> = WEAPON_COUNTS
@@ -350,9 +475,16 @@ pub extern "C" fn slx_generate_article(accessor: *mut u8, article: i32, arg3: bo
         .collect();
     let watch = is_clone_article(accessor, article);
     let before = if watch { active(accessor, article) } else { 0 };
+    let old = if watch { article_id(accessor, article) } else { None };
     let r = slx_generate_inner(accessor, article, arg3, arg4, &wanted);
     if watch {
         diag(format!("generate art={} actifs {} -> {} ret={:#x}", article, before, active(accessor, article), r));
+        if let Some(o) = old {
+            track(o, "ancien");
+        }
+        if let Some(n) = article_id(accessor, article) {
+            track(n, "nouveau");
+        }
     }
     r
 }
@@ -372,8 +504,12 @@ fn slx_generate_inner(accessor: *mut u8, article: i32, arg3: bool, arg4: i32, wa
                     // le premier exemplaire est d'ailleurs caché par le script du mod (up B, set_whole
                     // false). Refuser laissait ce premier exemplaire invisible : plus de bras géants.
                     let n = game_get_active_num(accessor, article);
+                    let old = article_id(accessor, article);
                     game_remove_exist(accessor, article, 0);
                     diag(format!("  remplace art={} actifs {} -> {} (avant de recréer)", article, n, game_get_active_num(accessor, article)));
+                    if let Some(o) = old {
+                        track(o, "retiré");
+                    }
                 }
             }
         }
