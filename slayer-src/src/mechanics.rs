@@ -14,6 +14,28 @@ static CORE: AtomicUsize = AtomicUsize::new(0);
 unsafe fn original_tension_hud(ctx: &InlineCtx) {
     let base = CORE.load(Ordering::Relaxed);
     if base != 0 {
+        // Correctif : la table « ce joueur a une jauge de Tension » (base + 0x579e8) n'était jamais remise à zéro.
+        // Après un match avec Slayer, le joueur gardait la jauge avec n'importe quel autre perso. On la recalcule
+        // ici à chaque image : seuls les Slayer présents dans le match (hors écran des résultats) l'ont.
+        let compact: unsafe extern "C" fn(i64) -> usize = std::mem::transmute(base + 0xa6e4);
+        let resultats = FighterManager::is_result_mode(singletons::FighterManager());
+        let mut a_jauge = [0u8; 8];
+        for entree in 0..8 {
+            let id = app::Fighter::get_id_from_entry_id(entree);
+            if id == *BATTLE_OBJECT_ID_INVALID as u32 || !app::sv_battle_object::is_active(id) {
+                continue;
+            }
+            let b = app::sv_battle_object::module_accessor(id);
+            if !resultats && slayer(b) {
+                let i = compact(entree as i64);
+                if i < 8 {
+                    a_jauge[i] = 1;
+                }
+            }
+        }
+        for i in 0..8 {
+            *((base + 0x579e8 + i) as *mut u8) = a_jauge[i];
+        }
         let draw: unsafe extern "C" fn(&InlineCtx) = std::mem::transmute(base + 0x1b29c);
         draw(ctx);
     }
