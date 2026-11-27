@@ -440,6 +440,16 @@ unsafe fn hitbox_event(ctx: &InlineCtx) {
         }
     }
 }
+// Correctif compteur de combo : ce crochet n'est plus posé au démarrage du jeu. Posé au démarrage, il modifiait
+// le début de la fonction « X a touché Y » avant que combo_hud ne la cherche par sa signature : combo_hud ne
+// trouvait plus la bonne fonction et ne comptait plus aucun coup. Il est maintenant posé une seule fois, au
+// chargement du premier match avec Slayer (toutes les recherches des autres plugins sont faites depuis longtemps).
+static COLLISION_HOOKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+unsafe extern "C" fn install_collision_once(_f: &mut L2CFighterCommon) {
+    if !COLLISION_HOOKED.swap(true, Ordering::AcqRel) {
+        skyline::install_hook!(collision);
+    }
+}
 #[skyline::hook(offset = 0x67a7b0)]
 unsafe fn collision(
     manager: u64,
@@ -578,12 +588,12 @@ pub fn install() {
             off_flag,
             set_flag,
             hitbox_event,
-            collision,
             original_tension_hud
         );
     }
     Agent::new("captain")
         .set_costume(crate::slots())
+        .on_start(install_collision_once)
         .status(Pre, RC, common_pre)
         .status(Main, RC, rc_main)
         .status(End, RC, rc_end)
