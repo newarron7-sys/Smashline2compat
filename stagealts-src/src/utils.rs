@@ -1,14 +1,14 @@
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 use locks::Mutex;
 use smash_arc::{Hash40, SearchLookup};
 
-use crate::{resources::types::FilesystemInfo, search::HashLookup};
+use crate::resources::types::FilesystemInfo;
 
-static HASH_LOOKUP: Mutex<Option<&'static HashLookup>> = Mutex::new(None);
+static HASH_LOOKUP: Mutex<Option<&'static HashMap<Hash40, String>>> = Mutex::new(None);
 
 pub struct PrettyPath {
-    lookup: &'static HashLookup,
+    lookup: &'static HashMap<Hash40, String>,
     components: Vec<Hash40>,
 }
 
@@ -61,8 +61,8 @@ impl Display for PrettyPath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for component in self.components.iter() {
             f.write_str("/")?;
-            if let Some(pretty) = self.lookup.get(*component) {
-                f.write_str(pretty)?;
+            if let Some(pretty) = self.lookup.get(component) {
+                f.write_str(pretty.as_str())?;
             } else {
                 write!(f, "{:#010x}", component.0)?;
             }
@@ -87,7 +87,11 @@ impl ConcatHash for Hash40 {
     }
 
     fn pretty(self) -> PrettyPath {
-        let lookup = hash_lookup();
+        if HASH_LOOKUP.lock().is_none() {
+            init_hash_lookup(true);
+        }
+
+        let lookup = HASH_LOOKUP.lock().unwrap();
 
         let Some(search) = FilesystemInfo::instance().map(|fs| fs.search()) else {
             return PrettyPath {
@@ -115,29 +119,22 @@ impl ConcatHash for Hash40 {
 }
 
 pub fn string_for_hash(hash: Hash40) -> String {
-    hash_lookup()
-        .get(hash)
-        .map(str::to_string)
+    if HASH_LOOKUP.lock().is_none() {
+        init_hash_lookup(true);
+    }
+
+    HASH_LOOKUP
+        .lock()
+        .unwrap()
+        .get(&hash)
+        .cloned()
         .unwrap_or_else(|| format!("{:#x}", hash.0))
 }
 
-/// The shared component-name lookup. It is built once by `init_hash_lookup` and reused by the search folder
-/// sort and by every pretty printer, so the table only ever exists once in memory. Falls back to an empty
-/// table if something asks for it before initialization.
-pub fn hash_lookup() -> &'static HashLookup {
-    let mut slot = HASH_LOOKUP.lock();
-    if slot.is_none() {
-        *slot = Some(Box::leak(Box::new(HashLookup::empty())));
-    }
-    (*slot).unwrap()
-}
-
 pub fn init_hash_lookup(empty: bool) {
-    let lookup = if empty {
-        HashLookup::empty()
+    if empty {
+        *HASH_LOOKUP.lock() = Some(Box::leak(Box::new(HashMap::new())));
     } else {
-        crate::search::get_search_lookup()
-    };
-    log::info!("Hash lookup initialized with {} component names", lookup.len());
-    *HASH_LOOKUP.lock() = Some(Box::leak(Box::new(lookup)));
+        *HASH_LOOKUP.lock() = Some(Box::leak(Box::new(crate::search::get_search_lookup())));
+    }
 }

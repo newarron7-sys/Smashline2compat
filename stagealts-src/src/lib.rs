@@ -63,11 +63,11 @@ unsafe fn initial_loading_hook(ctx: &mut skyline::hooks::InlineCtx) {
     // we are able to get vanilla behavior/consistent behavior. if we don't do this, then
     // on stage alts there might by random spawn issues on stage alts for stages like
     // PS2 because arcropolis has random ordering with hashsets when it builds new directories
-    // Reuse the lookup built at plugin init instead of reading Hashes_all a second time
+    let lookup = search::get_search_lookup();
     search::sort_folder_contents(
         Hash40::from("/"),
         FilesystemInfo::instance_mut().unwrap().search_mut(),
-        utils::hash_lookup(),
+        &lookup,
     );
 
     // We can do this before we sort, but I like doing it after. We build a lookup
