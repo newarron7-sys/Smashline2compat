@@ -110,4 +110,4 @@ fn log_crash_symbols() {
 }
 
 #[skyline::main(name = "slayer_smash")]
-pub fn main() { log_crash_symbols(); unsafe { effect_lookup::install(); param_config::update_int(*smash::lib::lua_const::FIGHTER_KIND_CAPTAIN, param_slots(), (hash40("attack_combo_max"),0), 1); } register_css(); moves::install(); audio::install(); normals::install(); cinematic::install(); mechanics::install(); locomotion::install(); mappa::install(); downb::install(); defense::install(); dandy::install(); slayer_effects::install(); physical_fx::install(); throws::install(); }
+pub fn main() { log_crash_symbols(); unsafe { effect_lookup::install(); param_config::update_int(*smash::lib::lua_const::FIGHTER_KIND_CAPTAIN, param_slots(), (hash40("attack_combo_max"),0), 1); } register_css(); moves::install(); audio::install(); normals::install(); cinematic::install(); mechanics::install(); locomotion::install(); mappa::install(); downb::install(); defense::install(); dandy::install(); slayer_effects::install(); physical_fx::install(); throws::install(); throws::install_suivi(); }

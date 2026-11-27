@@ -85,12 +85,17 @@ unsafe fn read_command(f: &mut L2CFighterCommon, e: usize) {
     }
     // Modif (demandée) : flèche du haut (croix) tenue + B = Super Mappa, sans Tension (comme Rock Howard).
     // Remplace le 236236 + A.
+    // Correctif crash : changer le statut tout de suite depuis cette boucle relançait la boucle dans la même image
+    // (Super Mappa -> boucle -> Super Mappa ...) jusqu'à dépasser la pile. On fait comme l'original : une demande
+    // traitée à l'image suivante, une seule fois (rien si une demande est déjà en cours ou si le Super Mappa tourne).
     if ControlModule::check_button_on(b, *CONTROL_PAD_BUTTON_APPEAL_HI)
         && ControlModule::check_button_trigger(b, *CONTROL_PAD_BUTTON_SPECIAL)
+        && command.pending == 0
+        && MotionModule::motion_kind(b) != smash::hash40("slayer_super_mappa")
     {
         command.steps = 0;
         command.pending = 2;
-        f.change_status((*FIGHTER_STATUS_KIND_SPECIAL_N).into(), false.into());
+        StatusModule::change_status_request_from_script(b, *FIGHTER_STATUS_KIND_SPECIAL_N, false);
     }
 }
 const CHECK_SPECIAL_N_UNIQ: i32 = 0x38;
