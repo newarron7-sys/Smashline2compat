@@ -25,7 +25,7 @@ mod physical_fx;
 mod throws;
 /// Slayer's colour slots: c180 is GGST Color 1, c181-c195 Colors 2-16, c196 the Haunted colour (source Color90).
 pub(crate) const FIRST_SLOT: i32 = 180;
-pub(crate) const LAST_SLOT: i32 = 196;
+pub(crate) const LAST_SLOT: i32 = 180; // seul c180 est installé (1 skin) : c181-c196 restent libres pour d autres persos sur Captain Falcon
 pub(crate) fn slots() -> Vec<usize> {
     (FIRST_SLOT as usize..=LAST_SLOT as usize).collect()
 }
