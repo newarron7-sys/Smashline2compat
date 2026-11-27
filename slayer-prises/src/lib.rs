@@ -26,10 +26,10 @@ unsafe extern "C" fn game_throw(agent: &mut L2CAgentBase) {
     let boma = agent.module_accessor;
     if is_excute(agent) {
         // éjection du coup de pied : vers le haut
-        ATTACK_ABS(agent, *FIGHTER_ATTACK_ABSOLUTE_KIND_THROW, 0, 7.0, 88, 75, 0, 70, 0.0, 1.0, *ATTACK_LR_CHECK_F, 0.0, true,
+        smash_script::macros::ATTACK_ABS(agent, *FIGHTER_ATTACK_ABSOLUTE_KIND_THROW, 0, 7.0, 88, 75, 0, 70, 0.0, 1.0, *ATTACK_LR_CHECK_F, 0.0, true,
                    Hash40::new("collision_attr_normal"), *ATTACK_SOUND_LEVEL_L, *COLLISION_SOUND_ATTR_KICK, *ATTACK_REGION_THROW);
         // si la prise est coupée (un autre joueur frappe Slayer), l'adversaire est relâché normalement
-        ATTACK_ABS(agent, *FIGHTER_ATTACK_ABSOLUTE_KIND_CATCH, 0, 3.0, 361, 100, 0, 60, 0.0, 1.0, *ATTACK_LR_CHECK_F, 0.0, true,
+        smash_script::macros::ATTACK_ABS(agent, *FIGHTER_ATTACK_ABSOLUTE_KIND_CATCH, 0, 3.0, 361, 100, 0, 60, 0.0, 1.0, *ATTACK_LR_CHECK_F, 0.0, true,
                    Hash40::new("collision_attr_normal"), *ATTACK_SOUND_LEVEL_S, *COLLISION_SOUND_ATTR_NONE, *ATTACK_REGION_THROW);
     }
     frame(lua, 3.0);
