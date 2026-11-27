@@ -1,0 +1,55 @@
+name: Build slayer_smash.nro (source vigomasias)
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'slayer-src/**', '.github/workflows/slayer-src.yml' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slayer-src
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: slayer-src
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache cargo-skyline, toolchain Switch et compilation
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/cargo-skyline
+            ~/.cargo/skyline
+            ~/.rustup/toolchains/*skyline*
+            ~/.cargo/registry
+            ~/.cargo/git
+            slayer-src/target
+          key: sls-skyline-v1-${{ hashFiles('slayer-src/Cargo.toml') }}
+          restore-keys: |
+            sls-skyline-v1-
+            sl2-skyline-v1-
+      - name: Install cargo-skyline
+        run: command -v cargo-skyline >/dev/null || cargo install cargo-skyline
+      - name: Install skyline toolchain
+        run: |
+          if rustup toolchain list | grep -qi skyline && [ -d ~/.cargo/skyline/toolchain ]; then echo "toolchain en cache"; exit 0; fi
+          for i in 1 2 3 4 5; do cargo skyline update-std && break; sleep 20; done
+      - name: Build
+        timeout-minutes: 25
+        run: |
+          yes | cargo skyline build --release
+          mkdir -p /tmp/raw && cp target/aarch64-skyline-switch/release/libslayer_smash.nro /tmp/raw/
+      - name: Publier le NRO sur la branche nro-slayer-src
+        run: |
+          cd /tmp/raw && ls -la
+          git init -q -b nro-slayer-src
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add -A && git commit -q -m "Build ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" nro-slayer-src
