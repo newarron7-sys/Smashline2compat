@@ -1,0 +1,55 @@
+name: Build slayer_prises.nro
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'slayer-prises/**', '.github/workflows/slayer-prises.yml' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slayer-prises
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: slayer-prises
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache cargo-skyline, toolchain Switch et compilation
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/cargo-skyline
+            ~/.cargo/skyline
+            ~/.rustup/toolchains/*skyline*
+            ~/.cargo/registry
+            ~/.cargo/git
+            slayer-prises/target
+          key: slp-skyline-v1-${{ hashFiles('slayer-prises/Cargo.toml') }}
+          restore-keys: |
+            slp-skyline-v1-
+            sl2-skyline-v1-
+      - name: Install cargo-skyline
+        run: command -v cargo-skyline >/dev/null || cargo install cargo-skyline
+      - name: Install skyline toolchain
+        run: |
+          if rustup toolchain list | grep -qi skyline && [ -d ~/.cargo/skyline/toolchain ]; then echo "toolchain en cache"; exit 0; fi
+          for i in 1 2 3 4 5; do cargo skyline update-std && break; sleep 20; done
+      - name: Build
+        timeout-minutes: 25
+        run: |
+          yes | cargo skyline build --release
+          mkdir -p /tmp/raw && cp target/aarch64-skyline-switch/release/libslayer_prises.nro /tmp/raw/
+      - name: Publier le NRO sur la branche nro-slayer
+        run: |
+          cd /tmp/raw && ls -la
+          git init -q -b nro-slayer
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add -A && git commit -q -m "Build ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" nro-slayer
