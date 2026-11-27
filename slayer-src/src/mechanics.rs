@@ -265,6 +265,8 @@ unsafe extern "C" fn roman_acmd(a: &mut L2CAgentBase) {
     }
 }
 unsafe fn meter_add(b: *mut app::BattleObjectModuleAccessor, amount: f32) {
+    // Jauge qui se charge 2 fois plus vite (coups donnés et dégâts reçus), demandé pour suivre le rythme de Potemkin.
+    let amount = if amount > 0.0 { amount * 2.0 } else { amount };
     let base = core();
     if base == 0 {
         return;
