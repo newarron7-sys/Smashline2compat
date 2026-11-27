@@ -18,6 +18,8 @@ frame(a.lua_state_agent, 21.0); if macros::is_excute(a) { CancelModule::enable_c
 unsafe extern "C" fn slayer_5k(a: &mut L2CAgentBase) {
 frame(a.lua_state_agent, 7.0); if macros::is_excute(a) {
 macros::ATTACK(a,0,0,Hash40::new("top"),6.2,45,40,0,25,2.05,0.0,12.75,5.75,Some(0.0),Some(12.75),Some(17.25),multiplier(6.2, 16.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_S,*COLLISION_SOUND_ATTR_KICK,*ATTACK_REGION_KICK);
+macros::ATTACK(a,1,0,Hash40::new("top"),6.2,45,40,0,25,3.5,0.0,4.0,6.0,Some(0.0),Some(4.0),Some(18.0),multiplier(6.2, 16.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_S,*COLLISION_SOUND_ATTR_KICK,*ATTACK_REGION_KICK);
+macros::ATTACK(a,2,0,Hash40::new("top"),6.2,45,40,0,25,3.0,0.0,8.5,6.0,Some(0.0),Some(8.5),Some(18.0),multiplier(6.2, 16.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_S,*COLLISION_SOUND_ATTR_KICK,*ATTACK_REGION_KICK);
 }
 frame(a.lua_state_agent, 10.0); super::native_fx::now(a, "slayer_201_smoke", true);   // source: SLY_201_smoke at 10
 if macros::is_excute(a) { AttackModule::clear_all(a.module_accessor); }
@@ -87,6 +89,8 @@ unsafe extern "C" fn slayer_6h(a: &mut L2CAgentBase) {
 frame(a.lua_state_agent, 19.0); super::shake::now(a, super::shake::Size::S); if macros::is_excute(a) {
 macros::ATTACK(a,0,0,Hash40::new("top"),10.5,300,40,0,25,3.5,0.0,23.0,2.8,Some(0.0),Some(23.0),Some(5.8),multiplier(10.5, 16.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_S,*COLLISION_SOUND_ATTR_PUNCH,*ATTACK_REGION_PUNCH);
 macros::ATTACK(a,1,0,Hash40::new("top"),10.5,300,40,0,25,2.5,0.0,18.7,1.8,Some(0.0),Some(18.7),Some(5.0),multiplier(10.5, 16.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_S,*COLLISION_SOUND_ATTR_PUNCH,*ATTACK_REGION_PUNCH);
+macros::ATTACK(a,2,0,Hash40::new("top"),10.5,300,40,0,25,4.0,0.0,4.0,10.0,Some(0.0),Some(20.0),Some(10.0),multiplier(10.5, 16.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_S,*COLLISION_SOUND_ATTR_PUNCH,*ATTACK_REGION_PUNCH);
+macros::ATTACK(a,3,0,Hash40::new("top"),10.5,300,40,0,25,4.0,0.0,4.0,18.0,Some(0.0),Some(20.0),Some(18.0),multiplier(10.5, 16.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_S,*COLLISION_SOUND_ATTR_PUNCH,*ATTACK_REGION_PUNCH);
 }
 frame(a.lua_state_agent, 22.0); super::shake::now(a, super::shake::Size::S); if macros::is_excute(a) {
 macros::ATTACK(a,0,0,Hash40::new("top"),10.5,300,85,0,55,3.0,0.0,15.0,5.6,Some(0.0),Some(15.0),Some(13.0),multiplier(10.5, 21.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_L,*COLLISION_SOUND_ATTR_PUNCH,*ATTACK_REGION_PUNCH);
@@ -127,8 +131,9 @@ frame(a.lua_state_agent, 18.0); if macros::is_excute(a) { WorkModule::off_flag(a
 unsafe extern "C" fn slayer_jk(a: &mut L2CAgentBase) {
 if macros::is_excute(a) { WorkModule::on_flag(a.module_accessor, *FIGHTER_STATUS_ATTACK_AIR_FLAG_ENABLE_LANDING); }
 frame(a.lua_state_agent, 6.0); if macros::is_excute(a) {
-macros::ATTACK(a,0,0,Hash40::new("top"),5.6,361,40,0,25,2.2,0.0,14.075,4.825,Some(0.0),Some(14.075),Some(13.375),multiplier(5.6, 15.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_S,*COLLISION_SOUND_ATTR_KICK,*ATTACK_REGION_KICK);
+macros::ATTACK(a,0,0,Hash40::new("top"),5.6,361,40,0,25,3.5,0.0,14.075,4.825,Some(0.0),Some(14.075),Some(13.375),multiplier(5.6, 15.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_S,*COLLISION_SOUND_ATTR_KICK,*ATTACK_REGION_KICK);
 macros::ATTACK(a,1,0,Hash40::new("top"),5.6,361,40,0,25,2.825,0.0,10.625,0.975,Some(0.0),Some(10.625),Some(1.675),multiplier(5.6, 15.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_S,*COLLISION_SOUND_ATTR_KICK,*ATTACK_REGION_KICK);
+macros::ATTACK(a,2,0,Hash40::new("top"),5.6,361,40,0,25,3.5,0.0,8.0,3.0,Some(0.0),Some(8.0),Some(14.0),multiplier(5.6, 15.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_S,*COLLISION_SOUND_ATTR_KICK,*ATTACK_REGION_KICK);
 }
 frame(a.lua_state_agent, 9.0); if macros::is_excute(a) { AttackModule::clear_all(a.module_accessor); }
 frame(a.lua_state_agent, 29.0); if macros::is_excute(a) { WorkModule::off_flag(a.module_accessor, *FIGHTER_STATUS_ATTACK_AIR_FLAG_ENABLE_LANDING); }
@@ -137,6 +142,8 @@ unsafe extern "C" fn slayer_jh(a: &mut L2CAgentBase) {
 if macros::is_excute(a) { WorkModule::on_flag(a.module_accessor, *FIGHTER_STATUS_ATTACK_AIR_FLAG_ENABLE_LANDING); }
 frame(a.lua_state_agent, 14.0); super::shake::now(a, super::shake::Size::M); if macros::is_excute(a) {
 macros::ATTACK(a,0,0,Hash40::new("top"),8.9,340,55,0,35,3.375,0.0,7.775,7.625,Some(0.0),Some(11.025),Some(7.625),multiplier(8.9, 18.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_M,*COLLISION_SOUND_ATTR_PUNCH,*ATTACK_REGION_PUNCH);
+macros::ATTACK(a,1,0,Hash40::new("top"),8.9,340,55,0,35,4.0,0.0,3.0,4.0,Some(0.0),Some(3.0),Some(12.0),multiplier(8.9, 18.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_M,*COLLISION_SOUND_ATTR_PUNCH,*ATTACK_REGION_PUNCH);
+macros::ATTACK(a,2,0,Hash40::new("top"),8.9,340,55,0,35,4.0,0.0,2.0,12.0,Some(0.0),Some(9.0),Some(12.0),multiplier(8.9, 18.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_M,*COLLISION_SOUND_ATTR_PUNCH,*ATTACK_REGION_PUNCH);
 }
 frame(a.lua_state_agent, 19.0); if macros::is_excute(a) { AttackModule::clear_all(a.module_accessor); }
 frame(a.lua_state_agent, 37.0); if macros::is_excute(a) { WorkModule::off_flag(a.module_accessor, *FIGHTER_STATUS_ATTACK_AIR_FLAG_ENABLE_LANDING); }
@@ -158,18 +165,21 @@ unsafe extern "C" fn slayer_js(a: &mut L2CAgentBase) {
 if macros::is_excute(a) { WorkModule::on_flag(a.module_accessor, *FIGHTER_STATUS_ATTACK_AIR_FLAG_ENABLE_LANDING); }
 frame(a.lua_state_agent, 9.0); if macros::is_excute(a) {
 macros::ATTACK(a,0,0,Hash40::new("top"),2.4,367,100,28,0,3.4,0.0,9.0,3.0,Some(0.0),Some(9.0),Some(5.5),1.15,0.35,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_M,*COLLISION_SOUND_ATTR_PUNCH,*ATTACK_REGION_PUNCH);
+macros::ATTACK(a,1,0,Hash40::new("top"),2.4,367,100,28,0,3.5,0.0,3.0,0.0,Some(0.0),Some(3.0),Some(9.0),1.15,0.35,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_M,*COLLISION_SOUND_ATTR_PUNCH,*ATTACK_REGION_PUNCH);
 AttackModule::set_vec_target_pos(a.module_accessor, 0, Hash40::new("top"), &smash::phx::Vector2f { x: 4.5, y: 8.0 }, 5, false);
 }
 frame(a.lua_state_agent, 12.0); if macros::is_excute(a) { AttackModule::clear_all(a.module_accessor); }
 frame(a.lua_state_agent, 14.0); if macros::is_excute(a) {
 AttackModule::clear_all(a.module_accessor);
 macros::ATTACK(a,0,0,Hash40::new("top"),2.4,367,100,28,0,3.4,0.0,9.0,3.0,Some(0.0),Some(9.0),Some(5.5),1.15,0.35,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_M,*COLLISION_SOUND_ATTR_PUNCH,*ATTACK_REGION_PUNCH);
+macros::ATTACK(a,1,0,Hash40::new("top"),2.4,367,100,28,0,3.5,0.0,3.0,0.0,Some(0.0),Some(3.0),Some(9.0),1.15,0.35,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_M,*COLLISION_SOUND_ATTR_PUNCH,*ATTACK_REGION_PUNCH);
 AttackModule::set_vec_target_pos(a.module_accessor, 0, Hash40::new("top"), &smash::phx::Vector2f { x: 4.5, y: 8.0 }, 5, false);
 }
 frame(a.lua_state_agent, 17.0); if macros::is_excute(a) { AttackModule::clear_all(a.module_accessor); }
 frame(a.lua_state_agent, 19.0); if macros::is_excute(a) {
 AttackModule::clear_all(a.module_accessor);
 macros::ATTACK(a,0,0,Hash40::new("top"),2.4,340,55,0,35,2.8,0.0,9.0,3.0,Some(0.0),Some(9.0),Some(5.5),multiplier(2.4, 18.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_M,*COLLISION_SOUND_ATTR_PUNCH,*ATTACK_REGION_PUNCH);
+macros::ATTACK(a,1,0,Hash40::new("top"),2.4,340,55,0,35,3.5,0.0,3.0,0.0,Some(0.0),Some(3.0),Some(9.0),multiplier(2.4, 18.0),1.0,*ATTACK_SETOFF_KIND_ON,*ATTACK_LR_CHECK_F,false,0,0.0,0,false,false,false,false,true,*COLLISION_SITUATION_MASK_GA,*COLLISION_CATEGORY_MASK_ALL,*COLLISION_PART_MASK_ALL,false,Hash40::new("collision_attr_normal"),*ATTACK_SOUND_LEVEL_M,*COLLISION_SOUND_ATTR_PUNCH,*ATTACK_REGION_PUNCH);
 }
 frame(a.lua_state_agent, 22.0); if macros::is_excute(a) { AttackModule::clear_all(a.module_accessor); }
 frame(a.lua_state_agent, 42.0); if macros::is_excute(a) { WorkModule::off_flag(a.module_accessor, *FIGHTER_STATUS_ATTACK_AIR_FLAG_ENABLE_LANDING); }
