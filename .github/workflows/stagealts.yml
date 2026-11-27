@@ -31,9 +31,9 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             stagealts-src/target
-          key: sta-skyline-v1-${{ hashFiles('stagealts-src/Cargo.toml') }}
+          key: sta-skyline-v2-${{ hashFiles('stagealts-src/Cargo.toml') }}
           restore-keys: |
-            sta-skyline-v1-
+            sta-skyline-v2-
             sls-skyline-v1-
             sl2-skyline-v1-
       - name: Install cargo-skyline
