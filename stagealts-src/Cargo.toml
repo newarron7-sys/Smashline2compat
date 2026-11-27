@@ -1,0 +1,41 @@
+[package]
+name = "stage-alts"
+version = "0.1.12"
+authors = []
+edition = "2021"
+
+[package.metadata.skyline]
+titleid = "01006A800016E000" # Smash Ultimate
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+log = "0.4.20"
+skyline = { git = "https://github.com/ultimate-research/skyline-rs.git" }
+locks = { git = "https://github.com/HDR-Development/smashline.git" }
+owo-colors = "3.5.0"
+smashnet = { git = "https://github.com/techyCoder81/smashnet" }
+smash-arc = { git = "https://github.com/jam1garner/smash-arc", features = [
+    "smash-runtime",
+    "rust-zstd",
+] }
+hash40 = "1.3.1"
+indexmap = "2.0.0"
+rand = { git = "https://github.com/skyline-rs/rand" }
+rlua-lua53-sys = { git = "https://github.com/blu-dev/rlua", branch = "smash" }
+prc-rs = { version = "1.6.1", features = ["indexmap-std"] }
+arcropolis-api = { git = "https://github.com/Raytwo/arcropolis_api" }
+
+[patch.crates-io]
+getrandom = { git = "https://github.com/skyline-rs/getrandom" }
+
+[features]
+file-log = []
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+lto = true
