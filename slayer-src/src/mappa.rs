@@ -88,7 +88,9 @@ unsafe fn read_command(f: &mut L2CFighterCommon, e: usize) {
     // Correctif crash : changer le statut tout de suite depuis cette boucle relançait la boucle dans la même image
     // (Super Mappa -> boucle -> Super Mappa ...) jusqu'à dépasser la pile. On fait comme l'original : une demande
     // traitée à l'image suivante, une seule fois (rien si une demande est déjà en cours ou si le Super Mappa tourne).
-    if ControlModule::check_button_on(b, *CONTROL_PAD_BUTTON_APPEAL_HI)
+    // Super Mappa : flèche de gauche ou de droite (provocation de côté) + B.
+    if (ControlModule::check_button_on(b, *CONTROL_PAD_BUTTON_APPEAL_S_L)
+        || ControlModule::check_button_on(b, *CONTROL_PAD_BUTTON_APPEAL_S_R))
         && ControlModule::check_button_trigger(b, *CONTROL_PAD_BUTTON_SPECIAL)
         && command.pending == 0
         && MotionModule::motion_kind(b) != smash::hash40("slayer_super_mappa")

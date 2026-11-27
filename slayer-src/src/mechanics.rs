@@ -369,6 +369,15 @@ unsafe extern "C" fn frame(f: &mut L2CFighterCommon) {
         st.last_damage = DamageModule::damage(b, 0);
         reset_meter(b);
     }
+    // Mode entraînement : comme Potemkin, la provocation remplit la jauge (à la fin de la provocation,
+    // sauf si elle a été annulée en Super Mappa).
+    if previous == *FIGHTER_STATUS_KIND_APPEAL
+        && status != *FIGHTER_STATUS_KIND_APPEAL
+        && status != *FIGHTER_STATUS_KIND_SPECIAL_N
+        && app::smashball::is_training_mode()
+    {
+        meter_add(b, 150.0);
+    }
     // The original target-selection field is kept in private per-object storage, never Captain's smaller native work array.
     let compact: unsafe extern "C" fn(i64) -> usize = std::mem::transmute(base + 0xa6e4);
     let index = compact(WorkModule::get_int(b, *FIGHTER_INSTANCE_WORK_ID_INT_ENTRY_ID) as i64);
